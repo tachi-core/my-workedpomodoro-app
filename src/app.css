@@ -9,3 +9,18 @@
 @import '@skeletonlabs/skeleton/optional/presets';
 
 @source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
+
+
+@keyframes slow-orbit {
+    0% {
+        transform: translateX(0) translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateX(10px) translateY(-10px) rotate(180deg);
+    }
+
+    100% {
+        transform: translateX(0) translateY(0) rotate(360deg);
+    }
+}

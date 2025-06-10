@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Lightswitch from '../lib/components/Lightswitch.svelte';
+	import Lightswitch from '$lib/components/Lightswitch.svelte';
 	import { onDestroy } from 'svelte';
-	import { tick } from 'svelte';
+	import { Progress } from '@skeletonlabs/skeleton-svelte';
 
 	const durations = {
 		pomodoro: 25 * 60,
@@ -10,16 +10,15 @@
 	};
 
 	const modes = ['pomodoro', 'shortBreak', 'longBreak'] as const;
-
-	type Mode = (typeof modes)[number]; // "pomodoro" | "shortBreak" | "longBreak"
+	type Mode = (typeof modes)[number];
 
 	let mode: Mode = 'pomodoro';
-
 	let timeLeft = durations[mode];
 	let totalTime = durations[mode];
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let isRunning = false;
-	// let isPaused = false;
+	let isMuted = false;
+	let alarmAudio: HTMLAudioElement | null = null;
 
 	function formatTime(seconds: number) {
 		const m = Math.floor(seconds / 60);
@@ -37,37 +36,30 @@
 	}
 
 	function startOrPauseTimer() {
-		// if (!isRunning && !isPaused) {
-		if (!isRunning) {
-			isRunning = true;
-			timer = setInterval(() => {
-				updateTime();
-			}, 1000);
-		} else {
+		if (isRunning) {
 			pauseTimer();
+		} else {
+			isRunning = true;
+			timer = setInterval(updateTime, 1000);
 		}
-		// else if (isPaused) {
-		// 	resumeTimer();
-		// }
 	}
 
 	function pauseTimer() {
 		if (timer) clearInterval(timer);
 		isRunning = false;
-		// isPaused = true;
 	}
 
 	function stopTimer() {
 		if (timer) clearInterval(timer);
 		timer = null;
 		isRunning = false;
-		// isPaused = false;
 	}
 
 	function resetTimer() {
 		stopTimer();
 		timeLeft = durations[mode];
 		totalTime = durations[mode];
+		stopAlarm();
 	}
 
 	function switchMode(m: Mode) {
@@ -76,109 +68,111 @@
 	}
 
 	function playAlarm() {
-		const audio = new Audio('/alarm.mp3');
-		audio.play();
+		if (!isMuted) {
+			alarmAudio = new Audio('/alarm.mp3');
+			alarmAudio.play();
+		}
+	}
+
+	function stopAlarm() {
+		if (alarmAudio) {
+			alarmAudio.pause();
+			alarmAudio.currentTime = 0;
+			alarmAudio = null;
+		}
 	}
 
 	$: progress = ((totalTime - timeLeft) / totalTime) * 100;
 
-	onDestroy(() => {
-		stopTimer();
-	});
+	onDestroy(() => stopTimer());
 
 	const now = new Date();
-
+	const day = now.getDate();
 	const formattedDate = now.toLocaleDateString('en-US', {
 		weekday: 'long',
 		month: 'long',
 		day: 'numeric'
 	});
-
 	function getOrdinal(n: number): string {
 		const s = ['th', 'st', 'nd', 'rd'];
 		const v = n % 100;
 		return s[(v - 20) % 10] || s[v] || s[0];
 	}
-
-	const day = now.getDate();
 	const dateWithOrdinal = formattedDate.replace(/\d+/, `${day}${getOrdinal(day)}`);
-
-	// function toggleDarkMode() {
-	// 	document.documentElement.classList.toggle('dark');
-	// }
 </script>
 
 <svelte:head>
 	<title>Pomodoro App</title>
-	<!-- <meta name="description" content="This is where the description goes for SEO" /> -->
 </svelte:head>
 
-<!-- <main
-	class="flex min-h-screen flex-col items-center justify-center bg-neutral-100 p-6 text-center dark:bg-neutral-900 dark:text-white"
-> -->
-<main
-	class="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-surface-50-950"
->
-	<div class="card space-y-5 rounded-2xl p-5 preset-outlined-surface-200-800 preset-filled-surface-100-900 shadow-xl">
-		<header class="flex justify-between">
-			<div>
-				<h1 class="mb-1 text-left text-3xl font-medium">Pomodoro Timer</h1>
-				<p class="text-left text-xs opacity-60">{dateWithOrdinal}</p>
+<main class="bg-surface-50-950 flex min-h-screen flex-col items-center justify-center p-6 text-center">
+	<div class="relative mx-auto max-w-[90vw] sm:max-w-md">
+		<!-- Efek Cahaya -->
+		<div class="pointer-events-none absolute top-0 right-0 h-full w-full translate-x-1/3 -translate-y-1/3 animate-[slow-orbit_20s_linear_infinite] rounded-full blur-3xl">
+			<!-- Light mode -->
+			<div class="bg-conic from-warning-500 to-warning-100 h-full w-full rounded-full opacity-0 transition-opacity duration-700 ease-in-out dark:opacity-100"></div>
+			<!-- Dark mode -->
+			<div class="bg-conic from-primary-900 to-primary-600 absolute top-0 left-0 h-full w-full rounded-full opacity-100 transition-opacity duration-700 ease-in-out dark:opacity-0"></div>
+		</div>
+
+		<!-- Card -->
+		<div class="card preset-outlined-surface-300-700 preset-filled-surface-100-900 relative z-10 space-y-5 rounded-2xl p-5 shadow-xl">
+			<header class="flex justify-between">
+				<div>
+					<h1 class="mb-1 text-left text-3xl font-medium">Pomodoro Timer</h1>
+					<p class="text-left text-xs opacity-60">{dateWithOrdinal}</p>
+				</div>
+				<Lightswitch />
+			</header>
+
+			<hr class="hr" />
+
+			<!-- Mode Buttons -->
+			<nav class="btn-group preset-outlined-surface-300-700 flex-row rounded-xl p-2">
+				{#each modes as m}
+					<button
+						class={`btn h-10 rounded-md text-xs font-semibold transition-all active:scale-[0.98] sm:text-sm
+							${mode === m ? 'preset-filled' : 'hover:preset-tonal'}`}
+						on:click={() => switchMode(m)}
+					>
+						{m === 'pomodoro' ? 'Pomodoro' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
+					</button>
+				{/each}
+			</nav>
+
+			<!-- Progress bar -->
+			<div class="mb-4 w-full max-w-md">
+				<Progress value={progress} meterBg="bg-surface-950-50" />
 			</div>
-			<Lightswitch />
-		</header>
 
-		<hr class="my-4 border-t border-slate-400 dark:border-slate-600" />
+			<!-- Timer display -->
+			<div id="timer-display" class="my-6 font-mono text-6xl">{formatTime(timeLeft)}</div>
 
-		<!-- Mode Buttons -->
-		<div
-			class="mb-4 flex flex-wrap gap-2 rounded-xl border border-slate-400 p-2 dark:border-slate-600"
-		>
-			{#each modes as m}
+			<!-- Control buttons -->
+			<div class="space-x-2">
 				<button
-					class={`inline-flex h-9 cursor-pointer items-center justify-center rounded-md px-3 text-xs font-semibold transition-all active:scale-[0.98] sm:text-sm
-					${
-						mode === m
-							? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-							: 'text-slate-800 hover:bg-slate-800/10 dark:text-slate-200 dark:hover:bg-slate-200/10'
-					}`}
-					on:click={() => switchMode(m)}
+					class="btn preset-filled h-10 min-w-[100px] rounded-lg font-semibold active:scale-[0.98]"
+					on:click={startOrPauseTimer}
 				>
-					{m === 'pomodoro' ? 'Pomodoro' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
+					{isRunning ? 'Pause' : 'Start'}
 				</button>
-			{/each}
-		</div>
-
-		<!-- Progress bar -->
-		<div class="mb-4 w-full max-w-md">
-			<div class="h-2 overflow-hidden rounded-full bg-slate-400 dark:bg-slate-700">
-				<div
-					class="h-full bg-slate-800 transition-all duration-300 dark:bg-slate-200"
-					style="width: {progress}%"
-				></div>
+				<button
+					class="btn preset-outlined-surface-800-200 hover:preset-tonal h-10 min-w-[100px] rounded-lg font-semibold active:scale-[0.98]"
+					on:click={resetTimer}
+				>
+					Reset
+				</button>
 			</div>
-		</div>
 
-		<div id="timer-display" class="my-6 font-mono text-6xl">{formatTime(timeLeft)}</div>
-
-		<!-- Control buttons -->
-		<div class="space-x-2">
-			<button
-				class="inline-flex h-10 min-w-[100px] cursor-pointer items-center justify-center rounded-lg bg-slate-800 px-[30px] text-[15px] font-semibold text-white active:scale-[0.98] active:transition-all dark:bg-slate-200 dark:text-slate-900"
-				on:click={startOrPauseTimer}
-			>
-				{#if !isRunning}
-					Start
-				{:else}
-					Pause
+			<!-- Sound control -->
+			<div class="mt-3 flex justify-center gap-2">
+				<button class="btn hover:preset-tonal text-xs" on:click={() => (isMuted = !isMuted)}>
+					{isMuted ? '🔇 Unmute' : '🔊 Mute'}
+				</button>
+				{#if alarmAudio}
+					<button class="btn text-xs" on:click={stopAlarm}>⏹ Stop Sound</button>
 				{/if}
-			</button>
-			<button
-				class="inline-flex h-10 min-w-[100px] cursor-pointer items-center justify-center rounded-lg border border-slate-400 px-[30px] text-[15px] font-semibold text-slate-800 hover:border-slate-800/15 hover:bg-slate-800/10 active:scale-[0.98] active:transition-all dark:border-slate-500 dark:text-white dark:hover:bg-slate-200/10"
-				on:click={resetTimer}
-			>
-				Reset
-			</button>
+			</div>
 		</div>
 	</div>
 </main>
