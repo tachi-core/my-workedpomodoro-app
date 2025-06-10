@@ -113,10 +113,13 @@
 	<!-- <meta name="description" content="This is where the description goes for SEO" /> -->
 </svelte:head>
 
-<main
+<!-- <main
 	class="flex min-h-screen flex-col items-center justify-center bg-neutral-100 p-6 text-center dark:bg-neutral-900 dark:text-white"
+> -->
+<main
+	class="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-surface-50-950"
 >
-	<div class="space-y-5 rounded-2xl p-5 outline-1 outline-slate-400 dark:outline-slate-600">
+	<div class="card space-y-5 rounded-2xl p-5 preset-outlined-surface-200-800 preset-filled-surface-100-900 shadow-xl">
 		<header class="flex justify-between">
 			<div>
 				<h1 class="mb-1 text-left text-3xl font-medium">Pomodoro Timer</h1>
