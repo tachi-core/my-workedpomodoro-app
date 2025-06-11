@@ -2,6 +2,10 @@
 	import Lightswitch from '$lib/components/Lightswitch.svelte';
 	import { onDestroy } from 'svelte';
 	import { Progress } from '@skeletonlabs/skeleton-svelte';
+	import IconVolumeOn from '@lucide/svelte/icons/volume-2';
+	import IconVolumeOff from '@lucide/svelte/icons/volume-off';
+	import IconStopCircle from '@lucide/svelte/icons/stop-circle';
+
 
 	const durations = {
 		pomodoro: 25 * 60,
@@ -41,6 +45,7 @@
 		} else {
 			isRunning = true;
 			timer = setInterval(updateTime, 1000);
+			stopAlarm();
 		}
 	}
 
@@ -79,6 +84,7 @@
 			alarmAudio.pause();
 			alarmAudio.currentTime = 0;
 			alarmAudio = null;
+			resetTimer();
 		}
 	}
 
@@ -105,18 +111,18 @@
 	<title>Pomodoro App</title>
 </svelte:head>
 
-<main class="bg-surface-50-950 flex min-h-screen flex-col items-center justify-center p-6 text-center">
-	<div class="relative mx-auto max-w-[90vw] sm:max-w-md">
+<main class="bg-surface-50-950 flex min-h-screen flex-col items-center justify-center p-6 text-center overflow-hidden">
+	<div class="relative mx-auto max-w-[120vw] sm:max-w-md">
 		<!-- Efek Cahaya -->
 		<div class="pointer-events-none absolute top-0 right-0 h-full w-full translate-x-1/3 -translate-y-1/3 animate-[slow-orbit_20s_linear_infinite] rounded-full blur-3xl">
 			<!-- Light mode -->
-			<div class="bg-conic from-warning-500 to-warning-100 h-full w-full rounded-full opacity-0 transition-opacity duration-700 ease-in-out dark:opacity-100"></div>
+			<div class="bg-conic from-primary-900 to-primary-600 h-full w-full rounded-full opacity-0 transition-opacity duration-700 ease-in-out dark:opacity-80"></div>
 			<!-- Dark mode -->
-			<div class="bg-conic from-primary-900 to-primary-600 absolute top-0 left-0 h-full w-full rounded-full opacity-100 transition-opacity duration-700 ease-in-out dark:opacity-0"></div>
+			<div class="bg-conic from-warning-500 to-warning-100 absolute top-0 left-0 h-full w-full rounded-full opacity-80 transition-opacity duration-700 ease-in-out dark:opacity-0"></div>
 		</div>
 
 		<!-- Card -->
-		<div class="card preset-outlined-surface-300-700 preset-filled-surface-100-900 relative z-10 space-y-5 rounded-2xl p-5 shadow-xl">
+		<div class="card preset-outlined-surface-300-700 bg-surface-100-900/90 relative z-10 space-y-5 rounded-2xl p-5 shadow-xl">
 			<header class="flex justify-between">
 				<div>
 					<h1 class="mb-1 text-left text-3xl font-medium">Pomodoro Timer</h1>
@@ -132,7 +138,9 @@
 				{#each modes as m}
 					<button
 						class={`btn h-10 rounded-md text-xs font-semibold transition-all active:scale-[0.98] sm:text-sm
-							${mode === m ? 'preset-filled' : 'hover:preset-tonal'}`}
+							${mode === m ? 'preset-filled' : 'hover:preset-tonal'}
+							${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+						disabled={isRunning}
 						on:click={() => switchMode(m)}
 					>
 						{m === 'pomodoro' ? 'Pomodoro' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
@@ -166,11 +174,20 @@
 
 			<!-- Sound control -->
 			<div class="mt-3 flex justify-center gap-2">
-				<button class="btn hover:preset-tonal text-xs" on:click={() => (isMuted = !isMuted)}>
-					{isMuted ? '🔇 Unmute' : '🔊 Mute'}
+				<button class="btn text-xs" on:click={() => (isMuted = !isMuted)}>
+					{#if isMuted}
+					<IconVolumeOff size="16" />
+					Unmute
+					{:else}
+					<IconVolumeOn size="16" />
+					Mute
+					{/if}
 				</button>
 				{#if alarmAudio}
-					<button class="btn text-xs" on:click={stopAlarm}>⏹ Stop Sound</button>
+					<button class="btn text-xs" on:click={stopAlarm}>
+						<IconStopCircle size="16" />
+						Stop Sound
+					</button>
 				{/if}
 			</div>
 		</div>
