@@ -5,7 +5,9 @@
 	import IconVolumeOn from '@lucide/svelte/icons/volume-2';
 	import IconVolumeOff from '@lucide/svelte/icons/volume-off';
 	import IconStopCircle from '@lucide/svelte/icons/stop-circle';
-
+	import { Popover } from '@skeletonlabs/skeleton-svelte';
+	import IconInfo from '@lucide/svelte/icons/info';
+	import IconX from '@lucide/svelte/icons/x';
 
 	const durations = {
 		pomodoro: 25 * 60,
@@ -21,8 +23,15 @@
 	let totalTime = durations[mode];
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let isRunning = false;
+	let isPaused = false;
 	let isMuted = false;
 	let alarmAudio: HTMLAudioElement | null = null;
+	let openInfo = false;
+	let progress = 0;
+
+	function updateProgress() {
+		progress = ((totalTime - timeLeft) / totalTime) * 100;
+	}
 
 	function formatTime(seconds: number) {
 		const m = Math.floor(seconds / 60);
@@ -33,6 +42,7 @@
 	function updateTime() {
 		if (timeLeft > 0) {
 			timeLeft--;
+			updateProgress();
 		} else {
 			stopTimer();
 			playAlarm();
@@ -40,9 +50,13 @@
 	}
 
 	function startOrPauseTimer() {
-		if (isRunning) {
+		if (isRunning && !isPaused) {
+			// sedang berjalan, lalu dipause
+			isPaused = true;
 			pauseTimer();
 		} else {
+			// mulai dari pause
+			isPaused = false;
 			isRunning = true;
 			timer = setInterval(updateTime, 1000);
 			stopAlarm();
@@ -58,12 +72,15 @@
 		if (timer) clearInterval(timer);
 		timer = null;
 		isRunning = false;
+		isPaused = false;
 	}
 
 	function resetTimer() {
 		stopTimer();
+		isPaused = false;
 		timeLeft = durations[mode];
 		totalTime = durations[mode];
+		updateProgress();
 		stopAlarm();
 	}
 
@@ -88,8 +105,6 @@
 		}
 	}
 
-	$: progress = ((totalTime - timeLeft) / totalTime) * 100;
-
 	onDestroy(() => stopTimer());
 
 	const now = new Date();
@@ -99,48 +114,86 @@
 		month: 'long',
 		day: 'numeric'
 	});
+
 	function getOrdinal(n: number): string {
 		const s = ['th', 'st', 'nd', 'rd'];
 		const v = n % 100;
 		return s[(v - 20) % 10] || s[v] || s[0];
 	}
+
 	const dateWithOrdinal = formattedDate.replace(/\d+/, `${day}${getOrdinal(day)}`);
+
+	function closeInfoPopover() {
+		openInfo = false;
+	}
 </script>
 
 <svelte:head>
 	<title>Pomodoro App</title>
 </svelte:head>
 
-<main class="bg-surface-50-950 flex min-h-screen flex-col items-center justify-center p-6 text-center overflow-hidden">
-	<div class="relative mx-auto max-w-[120vw] sm:max-w-md">
-		<!-- Efek Cahaya -->
-		<div class="pointer-events-none absolute top-0 right-0 h-full w-full translate-x-1/3 -translate-y-1/3 animate-[slow-orbit_20s_linear_infinite] rounded-full blur-3xl">
-			<!-- Light mode -->
-			<div class="bg-conic from-primary-900 to-primary-600 h-full w-full rounded-full opacity-0 transition-opacity duration-700 ease-in-out dark:opacity-80"></div>
-			<!-- Dark mode -->
-			<div class="bg-conic from-warning-500 to-warning-100 absolute top-0 left-0 h-full w-full rounded-full opacity-80 transition-opacity duration-700 ease-in-out dark:opacity-0"></div>
+<main
+	class="bg-surface-50-950 flex min-h-screen flex-col items-center justify-center overflow-hidden text-center"
+>
+	<div class="relative mx-auto w-full max-w-md px-4">
+		<div
+			class="pointer-events-none absolute top-0 right-0 h-full w-full translate-x-1/3 -translate-y-1/3 animate-[slow-orbit_20s_linear_infinite] rounded-full blur-3xl"
+		>
+			<div
+				class="from-primary-900 to-primary-600 h-full w-full rounded-full bg-conic opacity-0 transition-opacity duration-700 ease-in-out dark:opacity-80"
+			></div>
+			<div
+				class="from-warning-500 to-warning-100 absolute top-0 left-0 h-full w-full rounded-full bg-conic opacity-80 transition-opacity duration-700 ease-in-out dark:opacity-0"
+			></div>
 		</div>
 
-		<!-- Card -->
-		<div class="card preset-outlined-surface-300-700 bg-surface-100-900/90 relative z-10 space-y-5 rounded-2xl p-5 shadow-xl">
+		<div
+			class="card preset-outlined-surface-300-700 bg-surface-100-900/90 relative space-y-5 rounded-2xl p-5 shadow-xl"
+		>
 			<header class="flex justify-between">
 				<div>
-					<h1 class="mb-1 text-left text-3xl font-medium">Pomodoro Timer</h1>
+					<div class="flex items-center">
+						<h1 class="mb-1 text-left text-2xl font-medium sm:text-3xl">Pomodoro Timer</h1>
+						<Popover
+							open={openInfo}
+							onOpenChange={(e) => (openInfo = e.open)}
+							positioning={{ placement: 'top' }}
+							triggerBase="btn-icon hover:preset-tonal rounded-full p-1 m-1"
+							contentBase="card bg-surface-200-800 p-4 space-y-1 max-w-[320px] text-sm rounded-lg preset-outlined-surface-300-700"
+							arrow
+							arrowBackground="!bg-surface-200 dark:!bg-surface-800"
+						>
+							{#snippet trigger()}<IconInfo class="h-5 w-5" />{/snippet}
+							{#snippet content()}
+								<header class="flex items-start justify-between">
+									<p class="font-bold">Apa itu Pomodoro Timer?</p>
+									<button class="btn-icon hover:preset-tonal" on:click={closeInfoPopover}>
+										<IconX class="h-4 w-4" />
+									</button>
+								</header>
+								<article class="opacity-90">
+									Teknik manajemen waktu yang membagi pekerjaan menjadi sesi Fokus 25 menit,
+									istirahat 5 menit, lalu istirahat panjang 15 menit setiap 4 sesi.
+								</article>
+							{/snippet}
+						</Popover>
+					</div>
 					<p class="text-left text-xs opacity-60">{dateWithOrdinal}</p>
 				</div>
 				<Lightswitch />
 			</header>
 
-			<hr class="hr" />
+			<hr class="hr border-surface-950-50" />
 
-			<!-- Mode Buttons -->
-			<nav class="btn-group preset-outlined-surface-300-700 flex-row rounded-xl p-2">
+			<nav
+				class="btn-group preset-outlined-surface-950-50 w-full flex-row justify-center rounded-lg p-1.5 sm:justify-between sm:rounded-xl sm:p-2"
+			>
 				{#each modes as m}
 					<button
-						class={`btn h-10 rounded-md text-xs font-semibold transition-all active:scale-[0.98] sm:text-sm
+						class={`btn h-10 max-w-full min-w-[5rem] flex-1 rounded-md text-xs font-semibold transition-all active:scale-[0.98] sm:text-sm
 							${mode === m ? 'preset-filled' : 'hover:preset-tonal'}
-							${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
-						disabled={isRunning}
+							${isRunning || isPaused ? 'cursor-not-allowed opacity-60' : ''}`}
+						disabled={isRunning || isPaused}
 						on:click={() => switchMode(m)}
 					>
 						{m === 'pomodoro' ? 'Pomodoro' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
@@ -148,15 +201,12 @@
 				{/each}
 			</nav>
 
-			<!-- Progress bar -->
 			<div class="mb-4 w-full max-w-md">
-				<Progress value={progress} meterBg="bg-surface-950-50" />
+				<Progress value={progress} meterBg="bg-surface-950-50" trackBg="bg-surface-300-700" />
 			</div>
 
-			<!-- Timer display -->
 			<div id="timer-display" class="my-6 font-mono text-6xl">{formatTime(timeLeft)}</div>
 
-			<!-- Control buttons -->
 			<div class="space-x-2">
 				<button
 					class="btn preset-filled h-10 min-w-[100px] rounded-lg font-semibold active:scale-[0.98]"
@@ -172,21 +222,17 @@
 				</button>
 			</div>
 
-			<!-- Sound control -->
 			<div class="mt-3 flex justify-center gap-2">
 				<button class="btn text-xs" on:click={() => (isMuted = !isMuted)}>
 					{#if isMuted}
-					<IconVolumeOff size="16" />
-					Unmute
+						<IconVolumeOff size="16" /> Unmute
 					{:else}
-					<IconVolumeOn size="16" />
-					Mute
+						<IconVolumeOn size="16" /> Mute
 					{/if}
 				</button>
 				{#if alarmAudio}
 					<button class="btn text-xs" on:click={stopAlarm}>
-						<IconStopCircle size="16" />
-						Stop Sound
+						<IconStopCircle size="16" /> Stop Sound
 					</button>
 				{/if}
 			</div>

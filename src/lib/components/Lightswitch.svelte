@@ -107,8 +107,6 @@
 	onCheckedChange={(e) => handleModeChange(e.checked)}
 	controlInactive="bg-surface-100"
 	controlActive="bg-surface-300"
-
-	
 >
 	{#snippet inactiveChild()}<IconMoon size="14" />{/snippet}
 	{#snippet activeChild()}<IconSun size="14" />{/snippet}
