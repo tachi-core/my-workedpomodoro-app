@@ -29,6 +29,55 @@
 	let openInfo = false;
 	let progress = 0;
 
+	// Supaya timer jalan saat tidak buka tab browser di HP
+	let startTime: number | null = null;
+	let expectedEndTime: number | null = null;
+
+	function startOrPauseTimer() {
+		if (isRunning && !isPaused) {
+			isPaused = true;
+			pauseTimer();
+		} else {
+			isPaused = false;
+			isRunning = true;
+			if (!startTime) {
+				startTime = Date.now();
+				expectedEndTime = startTime + timeLeft * 1000;
+			} else {
+				// lanjutkan dari pause
+				expectedEndTime = Date.now() + timeLeft * 1000;
+			}
+			timer = setInterval(updateTime, 1000);
+			stopAlarm();
+		}
+	}
+
+	function updateTime() {
+		if (!expectedEndTime) return;
+
+		const now = Date.now();
+		const diff = Math.max(0, Math.floor((expectedEndTime - now) / 1000));
+		timeLeft = diff;
+		updateProgress();
+
+		if (diff <= 0) {
+			stopTimer();
+			playAlarm();
+		}
+	}
+
+	function stopTimer() {
+		if (timer) clearInterval(timer);
+		timer = null;
+		isRunning = false;
+		isPaused = false;
+		startTime = null;
+		expectedEndTime = null;
+	}
+
+																
+
+
 	function updateProgress() {
 		progress = ((totalTime - timeLeft) / totalTime) * 100;
 	}
@@ -39,41 +88,41 @@
 		return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 	}
 
-	function updateTime() {
-		if (timeLeft > 0) {
-			timeLeft--;
-			updateProgress();
-		} else {
-			stopTimer();
-			playAlarm();
-		}
-	}
+	// function updateTime() {
+	// 	if (timeLeft > 0) {
+	// 		timeLeft--;
+	// 		updateProgress();
+	// 	} else {
+	// 		stopTimer();
+	// 		playAlarm();
+	// 	}
+	// }
 
-	function startOrPauseTimer() {
-		if (isRunning && !isPaused) {
-			// sedang berjalan, lalu dipause
-			isPaused = true;
-			pauseTimer();
-		} else {
-			// mulai dari pause
-			isPaused = false;
-			isRunning = true;
-			timer = setInterval(updateTime, 1000);
-			stopAlarm();
-		}
-	}
+	// function startOrPauseTimer() {
+	// 	if (isRunning && !isPaused) {
+	// 		// sedang berjalan, lalu dipause
+	// 		isPaused = true;
+	// 		pauseTimer();
+	// 	} else {
+	// 		// mulai dari pause
+	// 		isPaused = false;
+	// 		isRunning = true;
+	// 		timer = setInterval(updateTime, 1000);
+	// 		stopAlarm();
+	// 	}
+	// }
 
 	function pauseTimer() {
 		if (timer) clearInterval(timer);
 		isRunning = false;
 	}
 
-	function stopTimer() {
-		if (timer) clearInterval(timer);
-		timer = null;
-		isRunning = false;
-		isPaused = false;
-	}
+	// function stopTimer() {
+	// 	if (timer) clearInterval(timer);
+	// 	timer = null;
+	// 	isRunning = false;
+	// 	isPaused = false;
+	// }
 
 	function resetTimer() {
 		stopTimer();
